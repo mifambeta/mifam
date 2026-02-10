@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Fans - Registro</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: white;
+      text-align: center;
+      padding: 50px;
+    }
+    .form-container {
+      background-color: #333;
+      padding: 30px;
+      border-radius: 8px;
+      width: 300px;
+      margin: 0 auto;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #888;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      width: 100%;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>ÚNETE A MI FANS</h1>
+  <p>¡Crea una cuenta y comienza a interactuar con tus Fans y estrellas!</p>
+  
+  <div class="form-container">
+    <h2>Registro</h2>
+    <input type="email" id="email" placeholder="Correo Electrónico" required>
+    <input type="text" id="username" placeholder="Nombre de Usuario" required>
+    <input type="password" id="password" placeholder="Contraseña" required>
+    <button onclick="signUp()">Registrar</button>
+    <p>¿Ya tienes cuenta? <a href="login.html" style="color: #4CAF50;">Iniciar sesión</a></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.5.0/dist/supabase.min.js"></script>
+  <script>
+    // Reemplaza con los datos de tu Supabase
+    const supabaseUrl = 'https://<YOUR-SUPABASE-URL>';
+    const supabaseKey = '<YOUR-SUPABASE-ANON-KEY>';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function signUp() {
+      const email = document.getElementById('email').value;
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      // Registrar usuario en Supabase Auth
+      const { user, error } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+      
+      if (error) {
+        alert("Error al crear cuenta: " + error.message);
+      } else {
+        // Registrar el perfil en la base de datos
+        const { data, error: dbError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: user.id,
+              username: username,
+              followers_count: 0,
+              estrellas: 'Bronce', // Valor inicial
+            }
+          ]);
+        
+        if (dbError) {
+          alert("Error al registrar perfil: " + dbError.message);
+        } else {
+          alert("¡Cuenta creada con éxito! Redirigiendo...");
+          window.location.href = "index.html"; // O la página que quieras después del registro
+        }
+      }
+    }
+  </script>
+</body>
+</html>
