@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mi Fan</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+background:#0f0f1a;
+color:white;
+font-family:Arial;
+text-align:center
+}
+
+input,button,textarea{
+padding:10px;
+margin:5px;
+border-radius:8px;
+border:none
+}
+
+button{
+background:#7b2cff;
+color:white;
+cursor:pointer
+}
+
+button:hover{
+opacity:0.8
+}
+
+.star{
+color:gold
+}
+
+.post{
+border:1px solid #333;
+margin:15px;
+padding:10px;
+border-radius:10px
+}
+</style>
+</head>
+<body>
+
+<h1>✨ Mi Fan</h1>
+
+<!-- AUTH -->
+<div id="auth">
+<input id="email" placeholder="Correo">
+<input id="password" type="password" placeholder="Contraseña">
+<br>
+<button onclick="register()">Registrarse</button>
+<button onclick="login()">Login</button>
+</div>
+
+<!-- PERFIL -->
+<div id="profile" style="display:none">
+<h2 id="username"></h2>
+<p>⭐ Nivel: <span id="starLevel"></span></p>
+<button onclick="logout()">Cerrar sesión</button>
+</div>
+
+<!-- CREAR POST -->
+<div id="createPost" style="display:none;">
+<textarea id="postContent" placeholder="Escribe algo..." style="width:80%;height:80px;"></textarea>
+<br>
+<button onclick="createPost()">Publicar</button>
+</div>
+
+<!-- POSTS -->
+<div id="posts"></div>
+
+<script>
+
+const SUPABASE_URL = "TU_SUPABASE_URL"
+const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY"
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// REGISTRO
+async function register(){
+const email = document.getElementById('email').value
+const password = document.getElementById('password').value
+
+const { error } = await supabase.auth.signUp({ email, password })
+
+if(error) alert(error.message)
+else alert("Revisa tu correo para confirmar")
+}
+
+// LOGIN
+async function login(){
+const email = document.getElementById('email').value
+const password = document.getElementById('password').value
+
+const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+if(error) alert(error.message)
+else loadProfile()
+}
+
+// CARGAR PERFIL
+async function loadProfile(){
+const { data:{ user } } = await supabase.auth.getUser()
+if(!user) return
+
+document.getElementById("auth").style.display="none"
+document.getElementById("profile").style.display="block"
+document.getElementById("createPost").style.display="block"
+
+document.getElementById("username").innerText=user.email
+
+updateStarLevel()
+loadPosts()
+}
+
+// NIVEL GLOBAL (según posts creados)
+async function updateStarLevel(){
+let { data } = await supabase
+.from("posts")
+.select("*")
+
+let totalStars = data ? data.length : 0
+
+let level="Bronce"
+if(totalStars>=5) level="Plata"
+if(totalStars>=10) level="Oro"
+if(totalStars>=20) level="Platinum"
+if(totalStars>=50) level="Diamante"
+
+document.getElementById("starLevel").innerText=level
+}
+
+// CREAR POST
+async function createPost(){
+const { data:{ user } } = await supabase.auth.getUser()
+if(!user) return alert("Inicia sesión")
+
+const content = document.getElementById("postContent").value
+if(!content) return alert("Escribe algo")
+
+await supabase.from("posts").insert([
+{
+user_id:user.id,
+content:content,
+stars:0
+}
+])
+
+document.getElementById("postContent").value=""
+loadPosts()
+}
+
+// DAR ESTRELLA (1 sola por usuario)
+async function giveStar(postId){
+
+const { data:{ user } } = await supabase.auth.getUser()
+if(!user) return alert("Inicia sesión")
+
+let { data:existing } = await supabase
+.from("post_stars")
+.select("*")
+.eq("post_id",postId)
+.eq("user_id",user.id)
+.single()
+
+if(existing){
+alert("Ya diste tu estrella ⭐")
+return
+}
+
+await supabase.from("post_stars").insert([
+{
+post_id:postId,
+user_id:user.id
+}
+])
+
+let { data:post } = await supabase
+.from("posts")
+.select("stars")
+.eq("id",postId)
+.single()
+
+await supabase
+.from("posts")
+.update({stars: post.stars + 1})
+.eq("id",postId)
+
+loadPosts()
+}
+
+// CARGAR POSTS
+async function loadPosts(){
+
+let { data:posts } = await supabase
+.from("posts")
+.select("*")
+.order("created_at",{ascending:false})
+
+let container=document.getElementById("posts")
+container.innerHTML=""
+
+posts.forEach(post=>{
+
+let div=document.createElement("div")
+div.className="post"
+
+div.innerHTML=`
+<p>${post.content}</p>
+<p>⭐ ${post.stars}</p>
+<button onclick="giveStar('${post.id}')">Dar estrella</button>
+`
+
+container.appendChild(div)
+
+})
+
+}
+
+async function logout(){
+await supabase.auth.signOut()
+location.reload()
+}
+
+loadProfile()
+
+</script>
+</body>
+</html>
