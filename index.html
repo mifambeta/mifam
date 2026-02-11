@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mi Fan</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{background:#0f0f1a;color:white;font-family:Arial;text-align:center}
+input,button{padding:10px;margin:5px;border-radius:8px;border:none}
+button{background:#7b2cff;color:white}
+.profile{margin-top:20px}
+.star{font-size:20px;color:gold}
+</style>
+</head>
+<body>
+
+<h1>✨ Mi Fan</h1>
+
+<div id="auth">
+<input id="email" placeholder="Correo">
+<input id="password" type="password" placeholder="Contraseña">
+<br>
+<button onclick="register()">Registrarse</button>
+<button onclick="login()">Login</button>
+</div>
+
+<div id="profile" style="display:none">
+<h2 id="username"></h2>
+<img id="avatar" width="120">
+<p>Seguidores: <span id="followers">0</span></p>
+<p class="star">⭐ <span id="starLevel"></span></p>
+<button onclick="logout()">Cerrar sesión</button>
+</div>
+
+<script>
+
+const { createClient } = window.supabase;
+
+const supabase = createClient(
+  "https://mbbrshqhlwvrakkbmjyp.supabase.co",
+  "sb_publishable_36f5SflI4YzfO1BYUpKWiA_P8jXD6Ro"
+);
+
+async function register(){
+  const email=document.getElementById('email').value
+  const password=document.getElementById('password').value
+
+  const {data,error}=await supabase.auth.signUp({
+    email: email,
+    password: password
+  })
+
+  if(error){
+    alert(error.message)
+  } else {
+    alert("Revisa tu correo para confirmar")
+  }
+}
+
+async function login(){
+  const email=document.getElementById('email').value
+  const password=document.getElementById('password').value
+
+  const {data,error}=await supabase.auth.signInWithPassword({
+    email: email,
+    password: password
+  })
+
+  if(error){
+    alert(error.message)
+  } else {
+    loadProfile()
+  }
+}
+
+async function loadProfile(){
+  const {data:{user}}=await supabase.auth.getUser()
+
+  if(!user)return
+
+  document.getElementById("auth").style.display="none"
+  document.getElementById("profile").style.display="block"
+
+  document.getElementById("username").innerText=user.email
+
+  let {data:profile}=await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id",user.id)
+  .single()
+
+  if(profile){
+    document.getElementById("followers").innerText=profile.followers
+    updateStar(profile.followers)
+  }
+}
+
+function updateStar(count){
+  let level="Bronce"
+  if(count>=100) level="Plata"
+  if(count>=200) level="Oro"
+  if(count>=500) level="Platinum"
+  if(count>=1000) level="Diamante"
+
+  document.getElementById("starLevel").innerText=level
+}
+
+async function logout(){
+  await supabase.auth.signOut()
+  location.reload()
+}
+
+loadProfile()
+
+</script>
+
+</body>
+</html>
